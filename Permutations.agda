@@ -21,11 +21,11 @@ open import Data.Fin.Permutation.Transposition.List using (TranspositionList; ev
 open import Data.Vec using (Vec; lookup; tabulate; updateAt; _[_]≔_; _++_; map; allFin)
 
 import Data.List
-infixr 2 _∷ᴸ_
+infixr 5 _∷ᴸ_
 pattern _∷ᴸ_ x xs = Data.List._∷_ x xs
 pattern []ᴸ = Data.List.[]
 
-infixr 2 _∷ⱽ_
+infixr 5 _∷ⱽ_
 pattern _∷ⱽ_ x xs = Data.Vec._∷_ x xs
 pattern []ⱽ = Data.Vec.[]
 
@@ -82,7 +82,6 @@ module SwapProperties where
   open import Relation.Nullary.Decidable.Core using (yes; no)
 
   swap-≡-id : ∀ (i : Fin n) (xs : Vec A n) → swap i i xs ≡ xs
-
   swap-≡-id i xs = begin
     xs [ i ]≔ lookup xs i [ i ]≔ lookup xs i
       ≡⟨ Vecₚ.[]≔-idempotent xs i ⟩
@@ -108,7 +107,7 @@ module SwapProperties where
             ≡⟨ cong (lookup xs) i≡j ⟩
           lookup xs j
           ∎
-  ... | no i≢j = begin
+  ... | no  i≢j = begin
           lookup (xs [ i ]≔ lookup xs j [ j ]≔ lookup xs i) i
             ≡⟨ Vecₚ.lookup∘update′ i≢j (xs [ _ ]≔ _) _ ⟩
           lookup (xs [ i ]≔ lookup xs j) i
@@ -128,7 +127,7 @@ module SwapProperties where
   swap-involutive : ∀ (i j : Fin n) (xs : Vec A n) → swap i j (swap i j xs) ≡ xs
   swap-involutive i j xs with i ≟ j
   ... | yes i≡j = trans (swap-≡-id′ _ i≡j) (swap-≡-id′ _ i≡j)
-  ... | no i≢j = begin
+  ... | no  i≢j = begin
         ys [ i ]≔ lookup ys j [ j ]≔ lookup ys i
           ≡⟨⟩
         xs [ i ]≔ lookup xs j [ j ]≔ lookup xs i [ i ]≔ lookup ys j [ j ]≔ lookup ys i
@@ -150,23 +149,91 @@ module SwapProperties where
         where
         ys = xs [ i ]≔ lookup xs j [ j ]≔ lookup xs i
 
-  open import Data.Product using (_×_)
-  open import Data.Sum using (_⊎_)
+  module _ where
+    open import Data.Product using (_×_)
+    open import Data.Sum using (_⊎_)
 
-  swap-minimal : ∀ (i j k : Fin n) → (xs : Vec A n) → ((i ≡ j) ⊎ (k ≢ i) × (k ≢ j)) → lookup (swap i j xs) k ≡ lookup xs k
-  swap-minimal i j k xs (_⊎_.inj₁ i≡j) = cong (flip lookup k) (swap-≡-id′ xs i≡j)
-  swap-minimal i j k xs (_⊎_.inj₂ (k≢i , k≢j)) = begin
-    lookup (xs [ i ]≔ lookup xs j [ j ]≔ lookup xs i) k
-      ≡⟨ Vecₚ.lookup∘update′ k≢j (xs [ _ ]≔ lookup xs _) (lookup xs _) ⟩
-    lookup (xs [ i ]≔ lookup xs j) k
-      ≡⟨ Vecₚ.lookup∘update′ k≢i xs (lookup xs _)  ⟩
-    lookup xs k
-    ∎
+    swap-minimal : ∀ (i j k : Fin n) → (xs : Vec A n) → ((i ≡ j) ⊎ (k ≢ i) × (k ≢ j)) → lookup (swap i j xs) k ≡ lookup xs k
+    swap-minimal i j k xs (_⊎_.inj₁ i≡j) = cong (flip lookup k) (swap-≡-id′ xs i≡j)
+    swap-minimal i j k xs (_⊎_.inj₂ (k≢i , k≢j)) = begin
+      lookup (xs [ i ]≔ lookup xs j [ j ]≔ lookup xs i) k
+        ≡⟨ Vecₚ.lookup∘update′ k≢j (xs [ _ ]≔ lookup xs _) (lookup xs _) ⟩
+      lookup (xs [ i ]≔ lookup xs j) k
+        ≡⟨ Vecₚ.lookup∘update′ k≢i xs (lookup xs _)  ⟩
+      lookup xs k
+      ∎
+
+  module _ where
+    open import Data.Vec.Relation.Unary.Any hiding (lookup)
+    import Data.Vec.Relation.Unary.Any.Properties as Anyₚ
+    open import Relation.Unary using (Pred)
+    open import Level using (Level)
+    open import Data.Sum using (inj₁; inj₂)
+
+    private variable ℓ : Level
+
+    import Data.Vec.Properties as Vecₚ
+    open Data.Vec using (_[_]=_; _∷_)
+
+    -- TODO : move this out
+    []≔-any : {P : Pred A ℓ} {x : A} {xs : Vec A n} {i : Fin n}
+            → P x → Any P (xs [ i ]≔ x)
+    []≔-any {xs = x ∷ xs…} {i = 0F}    px = here px
+    []≔-any {xs = x ∷ xs…} {i = suc i} px = there ([]≔-any {i = i} px)
+
+    swap-head-any : ∀ {P : Pred A ℓ} → {x₀ : A} → {xs : Vec A n}
+                  → (i : Fin n) → Any P xs → Any P (swap 0F (suc i) (x₀ ∷ xs))
+    swap-head-any {P = P} {x₀ = x₀} {xs = xs} i ∃px 
+      with index ∃px ≟ i
+    ...| yes ?ₓ≡i = here (subst P (cong (lookup xs) ?ₓ≡i) (Anyₚ.lookup-index ∃px))
+    ...| no  ?ₓ≢i = there (subst (Any P) (Vecₚ.[]≔-lookup _ _) ([]≔-any px))
+                  where
+                  px : P (lookup (xs [ i ]≔ x₀) (index ∃px))
+                  px = subst P (sym (Vecₚ.lookup∘update′ ?ₓ≢i xs x₀)) (Anyₚ.lookup-index ∃px)
+
+    swap-any : ∀ (i j : Fin n) → {P : Pred A ℓ} → {xs : Vec A n} → Any P xs → Any P (swap i j xs)
+    swap-any 0F      0F      {P} {x ∷ xs} = subst (Any P) (sym (swap-≡-id 0F (x ∷ xs)))
+    swap-any (suc _) (suc _) {xs = _ ∷ _} (here px)   = here px
+    swap-any (suc i) (suc j) {xs = _ ∷ _} (there ∃px) = there (swap-any i j ∃px)
+    swap-any 0F      (suc j) {xs = _ ∷ _} (there ∃px) = swap-head-any j ∃px
+    swap-any (suc i) 0F      {xs = _ ∷ _} (there ∃px) = swap-head-any i ∃px
+    swap-any 0F      (suc _) {xs = _ ∷ _} (here px) = there ([]≔-any px)
+    swap-any (suc _) 0F      {xs = _ ∷ _} (here px) = there ([]≔-any px)
+
+  module _ where
+    open import Data.Vec.Relation.Unary.All hiding (lookup)
+    import Data.Vec.Relation.Unary.All.Properties as Allₚ
+    open import Relation.Unary using (Pred)
+    open import Level using (Level)
+
+    private variable ℓ : Level
+
+    -- TODO : move this out
+    []≔-all : {P : Pred A ℓ} {y : A} {xs : Vec A n} {i : Fin n}
+            → All P xs → P y → All P (xs [ i ]≔ y)
+    []≔-all {i = 0F} (px ∷ pxs) py = py ∷ pxs
+    []≔-all {i = suc i} (px ∷ pxs) py = px ∷ []≔-all {i = i} pxs py
+
+    swap-all : ∀ (i j : Fin n) → {P : Pred A ℓ} → {xs : Vec A n} → All P xs → All P (swap i j xs)
+    swap-all i j pxs = []≔-all ([]≔-all pxs (Allₚ.lookup⁺ pxs j)) (Allₚ.lookup⁺ pxs i)
+
+  module _ where
+    open import Data.Vec.Relation.Unary.AllPairs
+    import Data.Vec.Relation.Unary.AllPairs.Properties as AllPairsₚ
+    open import Relation.Binary.Core using (Rel)
+    open import Level using (Level)
+
+    private variable ℓ : Level
+
+    swap-allpairs : ∀ (i j : Fin n) → {R : Rel A ℓ} → {xs : Vec A n}
+                  → (∀ (x y : A) → R x y → R y x)
+                  → AllPairs R xs → AllPairs R (swap i j xs)
+    swap-allpairs i j symmetric pxs = ?
 
 module UniqueProperties where
   import Data.Vec.Relation.Unary.AllPairs
 
-  infixr 2 _∷ᴬ_
+  infixr 5 _∷ᴬ_
   pattern _∷ᴬ_ x xs = Data.Vec.Relation.Unary.AllPairs._∷_ x xs
   pattern []ᴬ = Data.Vec.Relation.Unary.AllPairs.[]
 
@@ -174,7 +241,6 @@ module UniqueProperties where
   import Data.Fin.Properties as Finₚ
   open import UniquePropositional using (Unique) public
 
-  -- need to generalize to any decidable setoid
   lookup-injective : ∀ {xs : Vec (Fin n) m} → Unique (Finₚ.≡-decSetoid n) xs → ∀ i j → lookup xs i ≡ lookup xs j → i ≡ j
   lookup-injective (px ∷ᴬ pxs) 0F 0F xᵢ≡xⱼ = refl
   lookup-injective (px ∷ᴬ pxs) 0F (suc j) xᵢ≡xⱼ = contradiction xᵢ≡xⱼ (Allₚ.lookup⁺ px j)
@@ -199,11 +265,8 @@ module SwapUniqueProperties where
   open Data.Fin using (_≟_)
   open import Relation.Nullary.Decidable.Core using (yes; no)
 
-  -- more generally, swap perserves All, maybe easier to prove that?
-  swap-preserves-unique : ∀ (i j : Fin n) → {xs : Vec (Fin n) n} → UniqueFin xs → UniqueFin (swap i j xs)
-  swap-preserves-unique {n} i j {xs} uxs with i ≟ j
-  ... | yes i≡j = subst UniqueFin (sym (swap-≡-id′ xs i≡j)) uxs
-  ... | no i≢j = ?
+  swap-unique : ∀ (i j : Fin n) → {xs : Vec (Fin n) n} → UniqueFin xs → UniqueFin (swap i j xs)
+  swap-unique i j = SwapProperties.swap-allpairs i j ? -- need to show that Distinct is symmetric
 
 module SwapTranspose where
   open Data.Vec hiding (transpose)
@@ -227,7 +290,7 @@ module SwapTranspose where
     ∎
 
   swap-transpose : ∀ {σ : TranspositionList n} {π : Vec (Fin n) n}
-                  → (i j : Fin n) 
+                  → (i j : Fin n)
                   → π ≡ map (eval σ ⟨$⟩ˡ_) (allFin n) 
                   → swap i j π ≡ map (eval ((j , i) ∷ᴸ σ) ⟨$⟩ˡ_) (allFin n)
   swap-transpose {n} {σ} {π} i j π≈σ = begin
