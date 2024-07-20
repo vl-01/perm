@@ -126,7 +126,7 @@ module SwapProperties where
     lookup xs i
     ∎
 
-  swap-involutive : ∀ (i j : Fin n) (xs : Vec A n) → swap i j (swap i j xs) ≡ xs
+  swap-involutive : ∀ (i j : Fin n) → (xs : Vec A n) → swap i j (swap i j xs) ≡ xs
   swap-involutive i j xs with i ≟ j
   ... | yes i≡j = trans (swap-≡-id′ _ i≡j) (swap-≡-id′ _ i≡j)
   ... | no  i≢j = begin
@@ -153,11 +153,11 @@ module SwapProperties where
 
   module _ where
     open import Data.Product using (_×_)
-    open import Data.Sum using (_⊎_)
+    open import Data.Sum using (_⊎_; inj₁; inj₂)
 
     swap-minimal : ∀ (i j k : Fin n) → (xs : Vec A n) → ((i ≡ j) ⊎ (k ≢ i) × (k ≢ j)) → lookup (swap i j xs) k ≡ lookup xs k
-    swap-minimal i j k xs (_⊎_.inj₁ i≡j) = cong (flip lookup k) (swap-≡-id′ xs i≡j)
-    swap-minimal i j k xs (_⊎_.inj₂ (k≢i , k≢j)) = begin
+    swap-minimal i j k xs (inj₁ i≡j) = cong (flip lookup k) (swap-≡-id′ xs i≡j)
+    swap-minimal i j k xs (inj₂ (k≢i , k≢j)) = begin
       lookup (xs [ i ]≔ lookup xs j [ j ]≔ lookup xs i) k
         ≡⟨ Vecₚ.lookup∘update′ k≢j (xs [ _ ]≔ lookup xs _) (lookup xs _) ⟩
       lookup (xs [ i ]≔ lookup xs j) k
@@ -303,46 +303,80 @@ module UniqueProperties where
   swap-unique : ∀ (i j : Fin n) → {xs : Vec (Fin n) n} → UniqueFin xs → UniqueFin (swap i j xs)
   swap-unique i j = SwapProperties.swap-allpairs i j (_∘ sym)
 
-module SwapTranspose where
-  open Data.Vec hiding (transpose)
+module SwapFunctional where
+  open SwapProperties
+  open import Function.Bundles
   open import Relation.Binary.PropositionalEquality
   open ≡-Reasoning
-  open Data.Fin.Permutation using (transpose)
-  open import Data.Fin.Permutation.Components renaming (transpose to ⊙-transpose)
+  open import Data.Fin using (_≟_)
   import Data.Vec.Properties as Vecₚ
 
-  ⊙-swap-transpose : ∀ (i j : Fin n) (xs : Vec (Fin n) n) → swap i j xs ≡ map (⊙-transpose i j) xs
-  ⊙-swap-transpose i j xs = begin
-    swap i j xs
-    ≡⟨ ? ⟩
-    map (⊙-transpose i j) xs
-    -- how to deconstruct application?
-    --  ⊙-transpose i j k with does (k ≟ i)
-    --  ... | true  = j
-    --  ... | false with does (k ≟ j)
-    --  ...   | true  = i
-    --  ...   | false = k
-    ∎
+  swapᴾ : ∀ (i j : Fin n) → Fin n → Fin n
+  swapᴾ {n = n} i j = lookup (swap i j (allFin n))
 
-  swap-transpose : ∀ {σ : TranspositionList n} {π : Vec (Fin n) n}
-                  → (i j : Fin n)
-                  → π ≡ map (eval σ ⟨$⟩ˡ_) (allFin n) 
-                  → swap i j π ≡ map (eval ((j , i) ∷ᴸ σ) ⟨$⟩ˡ_) (allFin n)
-  swap-transpose {n} {σ} {π} i j π≈σ = begin
-    π [ i ]≔ lookup π j [ j ]≔ lookup π i
-      ≡⟨ ⊙-swap-transpose _ _ _ ⟩
-    map (⊙-transpose i j) π
-      ≡⟨⟩
-    map (transpose j i ⟨$⟩ˡ_) π
-      ≡⟨ cong _ π≈σ ⟩
-    map (transpose j i ⟨$⟩ˡ_) (map (eval σ ⟨$⟩ˡ_) 0…n)
-      ≡⟨⟩
-    (map (transpose j i ⟨$⟩ˡ_) ∘ map (eval σ ⟨$⟩ˡ_)) 0…n
-      ≡⟨ sym (Vecₚ.map-∘ _ _ _) ⟩
-    map ((transpose j i ⟨$⟩ˡ_) ∘ (eval σ ⟨$⟩ˡ_)) 0…n
-      ≡⟨⟩
-    map (transpose j i ∘ₚ eval σ ⟨$⟩ˡ_) 0…n
-      ≡⟨⟩
-    map (eval ((j , i) ∷ᴸ σ) ⟨$⟩ˡ_) 0…n
-    ∎
-    where 0…n = allFin n
+  open import Data.Sum using (inj₂)
+  open import Relation.Nullary.Decidable.Core using (yes; no)
+
+  swapᴾ-involutive : ∀ (i j k : Fin n) → swapᴾ i j (swapᴾ i j k) ≡ k
+  swapᴾ-involutive i j k with k ≟ i | k ≟ j
+  ... | yes k≡i | _ = begin
+          swapᴾ i j (swapᴾ i j k)
+            ≡⟨ cong (swapᴾ i j) lemma  ⟩
+          swapᴾ i j j
+            ≡⟨⟩
+          lookup (swap i j (allFin _)) j
+            ≡⟨ lookup-swapʳ i j (allFin _) ⟩
+          lookup (allFin _) i
+            ≡⟨ Vecₚ.lookup-allFin _ ⟩
+          i
+            ≡⟨ sym k≡i ⟩
+          k
+          ∎
+          where
+          lemma : swapᴾ i j k ≡ j
+          lemma = begin
+            lookup (swap i j (allFin _)) k
+              ≡⟨ cong (lookup (swap i j (allFin _))) k≡i ⟩
+            lookup (swap i j (allFin _)) i
+              ≡⟨ lookup-swapˡ i j (allFin _) ⟩
+            lookup (allFin _) j
+              ≡⟨ Vecₚ.lookup-allFin _ ⟩
+            j
+            ∎
+  ... | no _ | yes k≡j = begin
+          swapᴾ i j (swapᴾ i j k)
+            ≡⟨ cong (swapᴾ i j) lemma  ⟩
+          swapᴾ i j i
+            ≡⟨⟩
+          lookup (swap i j (allFin _)) i
+            ≡⟨ lookup-swapˡ i j (allFin _) ⟩
+          lookup (allFin _) j
+            ≡⟨ Vecₚ.lookup-allFin _ ⟩
+          j
+            ≡⟨ sym k≡j ⟩
+          k
+          ∎
+          where
+          lemma : swapᴾ i j k ≡ i
+          lemma = begin
+            lookup (swap i j (allFin _)) k
+              ≡⟨ cong (lookup (swap i j (allFin _))) k≡j ⟩
+            lookup (swap i j (allFin _)) j
+              ≡⟨ lookup-swapʳ i j (allFin _) ⟩
+            lookup (allFin _) i
+              ≡⟨ Vecₚ.lookup-allFin _ ⟩
+            i
+            ∎
+  ... | no k≢i | no k≢j = trans (cong (swapᴾ i j) lemma) lemma
+          where
+          lemma : swapᴾ i j k ≡ k
+          lemma = begin
+            lookup (swap i j (allFin _)) k
+              ≡⟨ swap-minimal _ _ _ (allFin _) (inj₂ (k≢i , k≢j)) ⟩
+            lookup (allFin _) k
+              ≡⟨ Vecₚ.lookup-allFin _ ⟩
+            k
+            ∎
+
+  swapᴾ-inverse : ∀ (i j : Fin n) → Fin n ↔ Fin n
+  swapᴾ-inverse i j = mk↔ₛ′ (swapᴾ i j) (swapᴾ i j) (swapᴾ-involutive i j) (swapᴾ-involutive i j)
