@@ -51,12 +51,14 @@ module Example where
   idxs = idxsʸ ++ idxsⁿ
 
   σᵗ : TranspositionList 7
-  σᵗ = (0F , 3F) ∷ᴸ
-       (1F , 4F) ∷ᴸ 
-       (2F , 3F) ∷ᴸ
-       (3F , 4F) ∷ᴸ
-       (4F , 5F) ∷ᴸ
-       []ᴸ
+  σᵗ = (0F , 3F) ∷ᴸ   -- [2 3 5 0 1 4 6]  [0 1 2 3 4 5 6]
+       (1F , 4F) ∷ᴸ   -- [0 3 5 2 1 4 6]  [3 1 2 0 4 5 6]
+       (2F , 3F) ∷ᴸ   -- [0 1 5 2 3 4 6]  [3 4 2 0 1 5 6]
+       (3F , 4F) ∷ᴸ   -- [0 1 2 5 3 4 6]  [3 4 0 2 1 5 6]
+       (4F , 5F) ∷ᴸ   -- [0 1 2 3 5 4 6]  [3 4 0 1 2 5 6]
+       (5F , 5F) ∷ᴸ   -- [0 1 2 3 4 5 6]  [3 4 0 1 5 2 6]
+       (6F , 6F) ∷ᴸ   -- [0 1 2 3 4 5 6]  [3 4 0 1 5 2 6]
+       []ᴸ            -- [0 1 2 3 4 5 6]  [3 4 0 1 5 2 6]
 
   σ : Permutation 7
   σ = eval σᵗ
@@ -167,9 +169,9 @@ module SwapProperties where
     open import Data.Vec.Relation.Unary.Any hiding (lookup)
     import Data.Vec.Relation.Unary.Any.Properties as Anyₚ
     open import Relation.Unary using (Pred)
-    open import Level using (Level)
     open import Data.Sum using (inj₁; inj₂)
 
+    open import Level using (Level)
     private variable ℓ : Level
 
     import Data.Vec.Properties as Vecₚ
@@ -218,17 +220,58 @@ module SwapProperties where
     swap-all i j pxs = []≔-all ([]≔-all pxs (Allₚ.lookup⁺ pxs j)) (Allₚ.lookup⁺ pxs i)
 
   module _ where
-    open import Data.Vec.Relation.Unary.AllPairs
+    open import Data.Vec.Relation.Unary.AllPairs using (AllPairs)
+    open import Data.Vec.Relation.Unary.All using (All)
     import Data.Vec.Relation.Unary.AllPairs.Properties as AllPairsₚ
     open import Relation.Binary.Core using (Rel)
     open import Level using (Level)
 
     private variable ℓ : Level
 
+    infixr 5 _∷ᴬ_
+    pattern _∷ᴬ_ x xs = All._∷_ x xs
+    pattern []ᴬ = All.[]
+
+    infixr 5 _∷ᴾ_
+    pattern _∷ᴾ_ x xs = AllPairs._∷_ x xs
+    pattern []ᴾ = AllPairs.[]
+
+    lookupᴬ : ∀ {R : Rel A ℓ} → {x : A} → {xs : Vec A n} → All (R x) xs → (i : Fin n) → R x (lookup xs i)
+    lookupᴬ (xᵢ𝑅x ∷ᴬ _) 0F = xᵢ𝑅x
+    lookupᴬ {R = R} (_ ∷ᴬ x𝑅xs) (suc i) = lookupᴬ {R = R} x𝑅xs i
+
+    replaceᴬ : ∀ {R : Rel A ℓ} {xs : Vec A n} {x x₀ : A}
+              → (i : Fin n)
+              → R x₀ x → All (R x₀) xs
+              → All (R x₀) (xs [ i ]≔ x)
+    replaceᴬ 0F x₀𝑅x (_ ∷ᴬ x₀𝑅xs) = x₀𝑅x ∷ᴬ x₀𝑅xs
+    replaceᴬ {R = R} (suc i) x₀𝑅x (x₀𝑅x₁ ∷ᴬ x₀𝑅xs) = x₀𝑅x₁ ∷ᴬ replaceᴬ {R = R} i x₀𝑅x x₀𝑅xs
+
+    swap-head-allpairs : ∀ {R : Rel A ℓ} → {x₀ : A} → {xs : Vec A n}
+                      → (∀ {x y : A} → R x y → R y x)
+                      → (i : Fin n) → All (R x₀) xs → AllPairs R xs
+                      → All (R (lookup xs i)) (xs [ i ]≔ x₀)
+    swap-head-allpairs         symm 0F      (x₀𝑅xᵢ ∷ᴬ _) (xᵢ𝑅xs ∷ᴾ _) = symm x₀𝑅xᵢ ∷ᴬ xᵢ𝑅xs
+    swap-head-allpairs {R = R} symm (suc i) (_ ∷ᴬ x₀𝑅xs) (xⱼ𝑅xs ∷ᴾ xs𝑅xs) 
+      = symm (lookupᴬ {R = R} xⱼ𝑅xs i) ∷ᴬ swap-head-allpairs symm i x₀𝑅xs xs𝑅xs
+
+    swap-head-allpairs… : ∀ {R : Rel A ℓ} → {x₀ : A} → {xs : Vec A n}
+                       → (∀ {x y : A} → R x y → R y x)
+                       → (i : Fin n) → All (R x₀) xs → AllPairs R xs → AllPairs R (xs [ i ]≔ x₀)
+    swap-head-allpairs… _ 0F (_ ∷ᴬ x₀𝑅xs) (_ ∷ᴾ xs𝑅xs) = x₀𝑅xs ∷ᴾ xs𝑅xs
+    swap-head-allpairs… {R = R} symm (suc i) (x₀𝑅xⱼ ∷ᴬ x₀𝑅xs) (xⱼ𝑅xs ∷ᴾ xs𝑅xs)
+      = replaceᴬ {R = R} i (symm x₀𝑅xⱼ) xⱼ𝑅xs ∷ᴾ swap-head-allpairs… symm i x₀𝑅xs xs𝑅xs
+
     swap-allpairs : ∀ (i j : Fin n) → {R : Rel A ℓ} → {xs : Vec A n}
-                  → (∀ (x y : A) → R x y → R y x)
+                  → (∀ {x y : A} → R x y → R y x)
                   → AllPairs R xs → AllPairs R (swap i j xs)
-    swap-allpairs i j symmetric pxs = ?
+    swap-allpairs 0F 0F {R = R} {xs = xs} _ = subst (AllPairs R) (sym (swap-≡-id 0F xs))
+    swap-allpairs 0F      (suc j) symm (x𝑅xs ∷ᴾ xs𝑅xs) 
+      = swap-head-allpairs symm j x𝑅xs xs𝑅xs ∷ᴾ swap-head-allpairs… symm j x𝑅xs xs𝑅xs
+    swap-allpairs (suc i) 0F      symm (x𝑅xs ∷ᴾ xs𝑅xs) 
+      = swap-head-allpairs symm i x𝑅xs xs𝑅xs ∷ᴾ swap-head-allpairs… symm i x𝑅xs xs𝑅xs
+    swap-allpairs (suc i) (suc j) symm (x𝑅xs ∷ᴾ xs𝑅xs) 
+      = swap-all i j x𝑅xs ∷ᴾ swap-allpairs i j symm xs𝑅xs
 
 module UniqueProperties where
   import Data.Vec.Relation.Unary.AllPairs
@@ -257,16 +300,8 @@ module UniqueProperties where
   UniqueFin : Vec (Fin n) n → Set
   UniqueFin {n} = Unique (Finₚ.≡-decSetoid n)
 
-module SwapUniqueProperties where
-  open UniqueProperties
-  open SwapProperties
-  open import Relation.Binary.PropositionalEquality
-  open ≡-Reasoning
-  open Data.Fin using (_≟_)
-  open import Relation.Nullary.Decidable.Core using (yes; no)
-
   swap-unique : ∀ (i j : Fin n) → {xs : Vec (Fin n) n} → UniqueFin xs → UniqueFin (swap i j xs)
-  swap-unique i j = SwapProperties.swap-allpairs i j ? -- need to show that Distinct is symmetric
+  swap-unique i j = SwapProperties.swap-allpairs i j (_∘ sym)
 
 module SwapTranspose where
   open Data.Vec hiding (transpose)
