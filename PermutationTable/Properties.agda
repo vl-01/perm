@@ -42,8 +42,8 @@ private module _ where
   pattern _∷ᵁ_ x xs = Unique._∷_ x xs
   pattern []ᵁ = Unique.[]
 
-all-Fin-∈-PermutationTable : ∀ {n} → {xs : Vec (Fin n) n} → Unique xs → ∀ (i : Fin n) → i ∈ᵀ xs
-all-Fin-∈-PermutationTable {n = n} {xs = xs} uxs i = h xs uxs ⊤ (Allₚ.lookup⁻ (λ _ → ∈⊤)) ∈⊤ (∣p∣≤n ⊤)
+all-Fin-∈ : ∀ {n} → {xs : Vec (Fin n) n} → Unique xs → ∀ (i : Fin n) → i ∈ᵀ xs
+all-Fin-∈ {n = n} {xs = xs} uxs i = h xs uxs ⊤ (Allₚ.lookup⁻ (λ _ → ∈⊤)) ∈⊤ (∣p∣≤n ⊤)
   where
   h : (xs : Vec (Fin n) m) → (uxs : Unique xs)
     → (unseen : Subset n) → (xs-unseen : All (_∈ unseen) xs)

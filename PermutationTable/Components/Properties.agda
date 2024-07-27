@@ -202,5 +202,3 @@ transpose-membership i j {x = x} = transpose-any i j {P = x ≡_}
 
 transpose-unique : ∀ (i j : Fin n) → {xs : Vec (Fin n) n} → Unique xs → Unique (transpose i j xs)
 transpose-unique i j = transpose-allpairs i j ≢-sym
-
-

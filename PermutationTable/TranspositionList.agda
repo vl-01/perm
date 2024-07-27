@@ -15,4 +15,3 @@ private
 eval : TranspositionList n → PermutationTable n
 eval [] = PermutationTable.id _
 eval ((i , j) ∷ idxs) = transpose i j (eval idxs)
-
