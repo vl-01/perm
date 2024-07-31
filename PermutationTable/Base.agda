@@ -12,14 +12,11 @@ open import PermutationTable.Properties.Unique
 
 private
   variable
-    n m k : ℕ
+    n m : ℕ
     ℓ : Level
 
-PermutationTable′ : ℕ → ℕ  → Set
-PermutationTable′ n m = ∃ (λ (xs : Vec (Fin n) m) → Unique xs)
-
 PermutationTable : ℕ → Set
-PermutationTable n = PermutationTable′ n n
+PermutationTable n = ∃ (λ (xs : Vec (Fin n) n) → Unique xs)
 
 table : ∀ {n} → PermutationTable n → Vec (Fin n) n
 table {n} (xs , _) = xs

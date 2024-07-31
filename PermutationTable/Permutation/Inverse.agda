@@ -13,23 +13,44 @@ open import Data.Nat using (ℕ)
 open import Data.Fin using (Fin)
 open import Data.Product using (_,_)
 
-open import Relation.Binary.PropositionalEquality using (_≡_; sym; cong; _≗_; module ≡-Reasoning)
-
-open import Data.Vec.Relation.Unary.Any using (index)
+open import Relation.Binary.PropositionalEquality using (_≡_; sym; cong; _≗_; module ≡-Reasoning; trans)
 
 open import Data.Fin using (_≟_)
 open import Relation.Nullary using (yes; no; contradiction)
-open import Data.Vec.Relation.Unary.Unique.Propositional.Properties using (lookup-injective)
+
+open import Data.Vec.Relation.Unary.Any using (index)
+open import Data.Vec.Relation.Unary.Any.Properties using (lookup-index)
+open import Data.Vec.Relation.Unary.Unique.Propositional using (Unique)
+open import Data.Vec.Relation.Unary.Unique.Propositional.Properties using (lookup-injective; tabulate⁺)
 
 open import Data.Vec.Properties using (tabulate-∘; tabulate∘lookup; tabulate-cong; lookup-map; map-cong; map-∘; map-lookup-allFin; lookup∘tabulate)
-open import Data.Vec.Relation.Unary.Any.Properties using (lookup-index)
 
 private
   variable
     A : Set
-    n : ℕ
+    n m : ℕ
 
 open ≡-Reasoning
+
+module _ where
+  private module _ where
+    open import Data.Vec.Relation.Unary.Any using (index; here; there)
+    open import Data.Fin.Properties using (suc-injective)
+    open import Data.Vec.Membership.Propositional using (_∈_)
+
+    lemma : {i j : Fin n} → {xs : Vec (Fin n) m}
+          → (∃i : i ∈ xs) → (∃j : j ∈ xs) → index ∃i ≡ index ∃j → i ≡ j
+    lemma (here i=x) (here j=x) _ = trans i=x (sym j=x)
+    lemma (there ∃i) (there ∃j) x = lemma ∃i ∃j (suc-injective x)
+
+  _⁻¹ : PermutationTable n → PermutationTable n
+  (σ , !σ)⁻¹ = (σ⁻¹ , !σ⁻¹)
+    where
+    σ⁻¹ : Vec (Fin _) _
+    σ⁻¹ = tabulate (index ∘ all-Fin-∈ !σ)
+    !σ⁻¹ : Unique σ⁻¹
+    !σ⁻¹ = tabulate⁺ (lemma (all-Fin-∈ !σ _) (all-Fin-∈ !σ _))
+
 
 permute-inverse-id : ∀ {n} (σ : PermutationTable n) → (xs : Vec A n) → permute (σ ⁻¹) (table σ) ≡ allFin n
 permute-inverse-id σ@(π , !π) xs = begin

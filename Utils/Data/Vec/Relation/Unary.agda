@@ -66,14 +66,6 @@ lookup-rel-sym sym {i = i} {j = j} i≠j ∀xy with <-cmp i j
 ... | tri≈ _ i=j _ = contradiction i=j i≠j
 ... | tri> _ _ i>j = sym (lookup-rel i>j ∀xy)
 
-module ConstructorDisambiguation where
-  open import Data.Vec.Relation.Unary.All using ()
-    public renaming ([] to []ᴬ; _∷_ to _∷ᴬ_)
-  open import Data.Vec.Relation.Unary.AllPairs using ()
-    public renaming ([] to []ᴾ; _∷_ to _∷ᴾ_)
-  open import Data.Vec.Relation.Unary.Unique.Propositional using ()
-    public renaming ([] to []ᵁ; _∷_ to _∷ᵁ_)
-
 open import Relation.Binary.PropositionalEquality using (sym; subst; _≡_; _≢_)
 open import Data.Vec.Properties using (cast-is-id)
 
