@@ -1,13 +1,13 @@
 {-# OPTIONS --safe #-}
 
-module PermutationTable.Components.Inverse where
+module PermutationTable.Transposition.Inverse where
 
 open import Data.Fin using (Fin)
 open import Data.Vec using (Vec)
 open import Data.Nat using (ℕ)
 
-open import PermutationTable.Components.Base
-open import PermutationTable.Components.Properties
+open import PermutationTable.Transposition.Base
+open import PermutationTable.Transposition.Properties
 open import Function.Bundles using (_↔_; mk↔ₛ′)
 
 private

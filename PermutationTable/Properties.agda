@@ -14,16 +14,17 @@ open import Data.Vec using (Vec)
 open import Data.Vec.Relation.Unary.Unique.Propositional using (Unique)
 open import Data.Vec.Relation.Unary.All using (All; map; zip)
 open import Data.Vec.Relation.Unary.Any using (here; there)
+open import Data.Vec.Membership.Propositional renaming (_∈_ to _∈ⱽ_; _∉_ to _∉ⱽ_)
+
+open import Data.Nat.Properties using (≤-pred; ≤-trans)
+open import Data.Vec.Relation.Unary.All.Properties using (lookup⁻)
 
 open import PermutationTable.Properties.Unique public
 
-open import Supplementary.Data.Fin.Subset.Properties
+open import Utils.Data.Fin.Subset.Properties
 open import Data.Fin.Subset.Properties
 
-open import Data.Vec.Membership.Propositional renaming (_∈_ to _∈ᵀ_; _∉_ to _∉ᵀ_)
 
-import Data.Nat.Properties as ℕₚ
-import Data.Vec.Relation.Unary.All.Properties as Allₚ
 
 private
   variable
@@ -42,13 +43,13 @@ private module _ where
   pattern _∷ᵁ_ x xs = Unique._∷_ x xs
   pattern []ᵁ = Unique.[]
 
-all-Fin-∈ : ∀ {n} → {xs : Vec (Fin n) n} → Unique xs → ∀ (i : Fin n) → i ∈ᵀ xs
-all-Fin-∈ {n = n} {xs = xs} uxs i = h xs uxs ⊤ (Allₚ.lookup⁻ (λ _ → ∈⊤)) ∈⊤ (∣p∣≤n ⊤)
+all-Fin-∈ : ∀ {n} → {xs : Vec (Fin n) n} → Unique xs → ∀ (i : Fin n) → i ∈ⱽ xs
+all-Fin-∈ {n = n} {xs = xs} uxs i = h xs uxs ⊤ (lookup⁻ (λ _ → ∈⊤)) ∈⊤ (∣p∣≤n ⊤)
   where
   h : (xs : Vec (Fin n) m) → (uxs : Unique xs)
     → (unseen : Subset n) → (xs-unseen : All (_∈ unseen) xs)
     → (i ∈ unseen) → ∣ unseen ∣ ≤ m 
-    → i ∈ᵀ xs
+    → i ∈ⱽ xs
   h []ⱽ []ᵁ  unseen []ᴬ i-unseen ∣unseen∣≤0 = contradiction ∣unseen∣≤0 (x∈p⇒∣p∣>0 i-unseen)
   h {m = suc m-1} (x ∷ⱽ xs) (ux ∷ᵁ uxs) unseen (x-unseen ∷ᴬ xs-unseen) i-unseen ∣unseen∣≤m with i ≟ x
   ... | yes i≡x = here i≡x
@@ -64,4 +65,4 @@ all-Fin-∈ {n = n} {xs = xs} uxs i = h xs uxs ⊤ (Allₚ.lookup⁻ (λ _ → �
     xs-yet-unseen = map (λ (x≢y , y-unseen) → x∈p∧x≢y⇒x∈p-y y-unseen (≢-sym x≢y)) (zip (ux , xs-unseen))
 
     ∣yet-unseen∣≤m-1 : ∣ yet-unseen ∣ ≤ m-1
-    ∣yet-unseen∣≤m-1 = ℕₚ.≤-pred (ℕₚ.≤-trans (x∈p⇒∣p-x∣<∣p∣ x-unseen) ∣unseen∣≤m)
+    ∣yet-unseen∣≤m-1 = ≤-pred (≤-trans (x∈p⇒∣p-x∣<∣p∣ x-unseen) ∣unseen∣≤m)

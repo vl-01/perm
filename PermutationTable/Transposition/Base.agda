@@ -1,6 +1,6 @@
 {-# OPTIONS --safe #-}
 
-module PermutationTable.Components.Base where
+module PermutationTable.Transposition.Base where
 
 open import Data.Fin using (Fin)
 open import Data.Vec using (Vec; lookup; _[_]≔_)

@@ -1,6 +1,6 @@
 {-# OPTIONS --safe #-}
 
-module Supplementary.Data.Fin.Permutation.Components.Properties where
+module Utils.Data.Fin.Permutation.Components.Properties where
 
 open import Data.Fin.Permutation.Components
 open import Data.Fin using (Fin; _≟_)
