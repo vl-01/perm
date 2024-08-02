@@ -26,3 +26,8 @@ id n = allFin n , allFin-Unique
 
 empty : PermutationTable 0
 empty = [] , []
+
+open import Relation.Binary.PropositionalEquality using (_≡_; subst)
+
+cast : m ≡ n → PermutationTable m → PermutationTable n
+cast eq = subst PermutationTable eq

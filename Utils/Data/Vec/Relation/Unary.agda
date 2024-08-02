@@ -14,7 +14,7 @@ open import Data.Vec.Relation.Unary.Unique.Propositional using (Unique)
 
 private
   variable
-    A : Set
+    A B : Set
     n m : ℕ
     ℓ : Level
 
@@ -28,10 +28,6 @@ private
         → All P xs → P y → All P (xs [ i ]≔ y)
 []≔-all {i = zero } (px ∷ pxs) py = py ∷ pxs
 []≔-all {i = suc i} (px ∷ pxs) py = px ∷ []≔-all {i = i} pxs py
-
-all-lookup : ∀ {P : Pred A ℓ} → {xs : Vec A n} → All P xs → (i : Fin n) → P (lookup xs i)
-all-lookup (px ∷ _) zero = px
-all-lookup (_ ∷ pxs) (suc i) = all-lookup pxs i
 
 all-replace : ∀ {P : Pred A ℓ} {xs : Vec A n} {x : A}
           → (i : Fin n)
@@ -47,13 +43,14 @@ open import Relation.Binary.PropositionalEquality using (_≢_)
 open import Relation.Nullary using (contradiction)
 open import Relation.Binary.Definitions using (tri<; tri≈; tri>)
 open import Relation.Binary using (Rel)
+open import Data.Vec.Relation.Unary.All.Properties using (lookup⁺)
 
 lookup-rel : {i j : Fin n}
            → i < j
            → {R : Rel A ℓ} → {xs : Vec A n} → AllPairs R xs
            → R (lookup xs i) (lookup xs j)
 lookup-rel {i = suc i-1} {j = suc j-1} i<j (_ ∷ ∀xy) = lookup-rel {i = i-1} {j = j-1} (s<s⁻¹ i<j) ∀xy
-lookup-rel {i =  zero}   {j = suc j-1} 0<j {R = R} (x∀y ∷ _) = all-lookup x∀y j-1
+lookup-rel {i =  zero}   {j = suc j-1} 0<j {R = R} (x∀y ∷ _) = lookup⁺ x∀y j-1
 
 lookup-rel-sym : {R : Rel A ℓ}
                → (sym : ∀ {x y : A} → R x y → R y x)
@@ -72,3 +69,9 @@ open import Data.Vec.Properties using (cast-is-id)
 cast-unique : {xs : Vec A n} → (eq : n ≡ m) → Unique xs → Unique (Data.Vec.cast eq xs)
 cast-unique _≡_.refl [] = []
 cast-unique _≡_.refl (!x ∷ !xs) = subst (All (_ ≢_)) (sym (cast-is-id _≡_.refl _)) !x ∷ cast-unique _≡_.refl !xs
+
+open import Data.Product using (Σ; _,_)
+open import Function using (_∘_)
+
+lookup-dep : {P : Pred A ℓ} → {xs : Vec A n} → (∀xs : All P xs) → Fin n → Σ A P
+lookup-dep {xs = xs} ∀xs i = lookup xs i , lookup⁺ ∀xs i

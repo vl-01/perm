@@ -12,3 +12,5 @@ private
     A : Set
     n m k : ℕ
     ℓ : Level
+
+open import PermutationTable.Base public

@@ -6,7 +6,7 @@ open import Level using (Level)
 
 open import Function using (_∘_)
 
-open import Data.Nat.Base using (ℕ)
+open import Data.Nat using (ℕ)
 open import Data.Vec using (Vec; []; _∷_; map; lookup)
 open import Data.Fin using (Fin)
 open import Data.Sum using (inj₁; inj₂)
@@ -17,10 +17,11 @@ open import Relation.Unary using (Pred)
 open import Data.Vec.Relation.Unary.Any using (Any; here; there; index; toSum)
 open import Data.Vec.Relation.Unary.Any.Properties using (lookup-index; ¬Any[])
 open import Data.Vec.Relation.Unary.Unique.Propositional using (Unique)
+open import Data.Vec.Properties using (map-cong; map-∘)
 
 open import Data.Vec.Membership.Propositional using (_∈_)
 
-open import Relation.Binary.PropositionalEquality using (_≡_; refl; sym; trans; subst; ≢-sym)
+open import Relation.Binary.PropositionalEquality using (_≡_; refl; sym; trans; subst; ≢-sym; cong; module ≡-Reasoning)
 open import Relation.Nullary using (contradiction)
 open import Relation.Binary using (Rel)
 
@@ -29,6 +30,7 @@ open import PermutationTable.Permutation.Base
 open import PermutationTable.Properties
 
 open import Utils.Data.Vec.Relation.Unary
+open import Utils.Data.Vec.Properties
 
 module _ where
   open import Data.Nat using (suc)
@@ -37,9 +39,23 @@ module _ where
 
 private
   variable
-    A : Set
+    A B : Set
     n m : ℕ
     ℓ : Level
+
+permute-map : (σ : PermutationTable n)
+            → (f : A → B)
+            → (xs : Vec A n)
+            → permute σ (map f xs) ≡ map f (permute σ xs)
+permute-map σ f xs = begin
+  map (lookup (map f xs)) _
+    ≡⟨ (map-cong (lookup-map-≗ f xs)) _ ⟩
+  map (f ∘ lookup xs) _
+    ≡⟨ (map-∘ f (lookup xs)) _ ⟩
+  map f (map (lookup xs) _)
+  ∎
+  where
+  open ≡-Reasoning
 
 module _ where
   private module _ where

@@ -22,7 +22,7 @@ open import Data.Sum using (_⊎_; inj₁; inj₂)
 open import Data.Vec.Relation.Unary.Any hiding (lookup)
 open import Data.Vec.Relation.Unary.All hiding (lookup)
 open import Data.Vec.Relation.Unary.AllPairs
-open import Data.Vec.Relation.Unary.Unique.Propositional
+open import Data.Vec.Relation.Unary.Unique.Propositional using (Unique)
 open import Data.Vec.Membership.Propositional using (_∈_)
 
 open import Utils.Data.Vec.Relation.Unary
@@ -144,7 +144,6 @@ transpose-any← i j px = subst (Any _) (transpose-involutive i j _) (transpose-
 transpose-all : ∀ (i j : Fin n) → {P : Pred A ℓ} → {xs : Vec A n} → All P xs → All P (transpose i j xs)
 transpose-all i j pxs = []≔-all ([]≔-all pxs (Allₚ.lookup⁺ pxs j)) (Allₚ.lookup⁺ pxs i)
 
-open ConstructorDisambiguation
 
 private module _ where
   open import Data.Vec.Relation.Unary.AllPairs using (AllPairs)
@@ -158,27 +157,27 @@ private module _ where
                     → (∀ {x y : A} → R x y → R y x)
                     → (i : Fin n) → All (R x₀) xs → AllPairs R xs
                     → All (R (lookup xs i)) (xs [ i ]≔ x₀)
-  transpose-head-allpairs sym zero    (x₀𝑅xᵢ ∷ᴬ _) (xᵢ𝑅xs ∷ᴾ _) = sym x₀𝑅xᵢ ∷ᴬ xᵢ𝑅xs
-  transpose-head-allpairs sym (suc i) (_ ∷ᴬ x₀𝑅xs) (xⱼ𝑅xs ∷ᴾ xs𝑅xs) 
-    = sym (all-lookup xⱼ𝑅xs i) ∷ᴬ transpose-head-allpairs sym i x₀𝑅xs xs𝑅xs
+  transpose-head-allpairs sym zero    (x₀𝑅xᵢ ∷ _) (xᵢ𝑅xs ∷ _) = sym x₀𝑅xᵢ ∷ xᵢ𝑅xs
+  transpose-head-allpairs sym (suc i) (_ ∷ x₀𝑅xs) (xⱼ𝑅xs ∷ xs𝑅xs) 
+    = sym (Allₚ.lookup⁺ xⱼ𝑅xs i) ∷ transpose-head-allpairs sym i x₀𝑅xs xs𝑅xs
 
   transpose-head-allpairs… : ∀ {R : Rel A ℓ} → {x₀ : A} → {xs : Vec A n}
                      → (∀ {x y : A} → R x y → R y x)
                      → (i : Fin n) → All (R x₀) xs → AllPairs R xs → AllPairs R (xs [ i ]≔ x₀)
-  transpose-head-allpairs… _ zero (_ ∷ᴬ x₀𝑅xs) (_ ∷ᴾ xs𝑅xs) = x₀𝑅xs ∷ᴾ xs𝑅xs
-  transpose-head-allpairs… sym (suc i) (x₀𝑅xⱼ ∷ᴬ x₀𝑅xs) (xⱼ𝑅xs ∷ᴾ xs𝑅xs)
-    = all-replace i (sym x₀𝑅xⱼ) xⱼ𝑅xs ∷ᴾ transpose-head-allpairs… sym i x₀𝑅xs xs𝑅xs
+  transpose-head-allpairs… _ zero (_ ∷ x₀𝑅xs) (_ ∷ xs𝑅xs) = x₀𝑅xs ∷ xs𝑅xs
+  transpose-head-allpairs… sym (suc i) (x₀𝑅xⱼ ∷ x₀𝑅xs) (xⱼ𝑅xs ∷ xs𝑅xs)
+    = all-replace i (sym x₀𝑅xⱼ) xⱼ𝑅xs ∷ transpose-head-allpairs… sym i x₀𝑅xs xs𝑅xs
 
 transpose-allpairs : ∀ (i j : Fin n) → {R : Rel A ℓ} → {xs : Vec A n}
               → (∀ {x y : A} → R x y → R y x)
               → AllPairs R xs → AllPairs R (transpose i j xs)
 transpose-allpairs zero zero {R = R} {xs = xs} _ = subst (AllPairs R) (sym (transpose-≡-id zero xs))
-transpose-allpairs zero (suc j) sym (x𝑅xs ∷ᴾ xs𝑅xs) 
-  = transpose-head-allpairs sym j x𝑅xs xs𝑅xs ∷ᴾ transpose-head-allpairs… sym j x𝑅xs xs𝑅xs
-transpose-allpairs (suc i) zero    sym (x𝑅xs ∷ᴾ xs𝑅xs) 
-  = transpose-head-allpairs sym i x𝑅xs xs𝑅xs ∷ᴾ transpose-head-allpairs… sym i x𝑅xs xs𝑅xs
-transpose-allpairs (suc i) (suc j) sym (x𝑅xs ∷ᴾ xs𝑅xs) 
-  = transpose-all i j x𝑅xs ∷ᴾ transpose-allpairs i j sym xs𝑅xs
+transpose-allpairs zero (suc j) sym (x𝑅xs ∷ xs𝑅xs) 
+  = transpose-head-allpairs sym j x𝑅xs xs𝑅xs ∷ transpose-head-allpairs… sym j x𝑅xs xs𝑅xs
+transpose-allpairs (suc i) zero    sym (x𝑅xs ∷ xs𝑅xs) 
+  = transpose-head-allpairs sym i x𝑅xs xs𝑅xs ∷ transpose-head-allpairs… sym i x𝑅xs xs𝑅xs
+transpose-allpairs (suc i) (suc j) sym (x𝑅xs ∷ xs𝑅xs) 
+  = transpose-all i j x𝑅xs ∷ transpose-allpairs i j sym xs𝑅xs
 
 transpose-membership : ∀ (i j : Fin n) → {x : A} → {xs : Vec A n}
                 → (x ∈ xs) → (x ∈ transpose i j xs)
